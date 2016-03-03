@@ -50,11 +50,12 @@ func TestFunction_Open_requireConfigValues(t *testing.T) {
 	assert.Contains(t, timeoutErr.Error(), "Timeout: zero value")
 
 	fn = &function.Function{
-		Path: "_fixtures/invalidRole",
-		Log:  log.Log,
+		Path:           "_fixtures/invalidRole",
+		Log:            log.Log,
+		IsRoleRequired: true,
 	}
 	roleErr := fn.Open()
-	assert.Contains(t, roleErr.Error(), "Role: zero value")
+	assert.Contains(t, roleErr.Error(), "role is required")
 
 }
 

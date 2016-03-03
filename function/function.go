@@ -87,7 +87,7 @@ type Config struct {
 	Runtime          string            `json:"runtime" validate:"nonzero"`
 	Memory           int64             `json:"memory" validate:"nonzero"`
 	Timeout          int64             `json:"timeout" validate:"nonzero"`
-	Role             string            `json:"role" validate:"nonzero"`
+	Role             string            `json:"role"`
 	Handler          string            `json:"handler" validate:"nonzero"`
 	Shim             bool              `json:"shim"`
 	Environment      map[string]string `json:"environment"`
@@ -100,13 +100,14 @@ type Config struct {
 // from the "function.json" file on disk.
 type Function struct {
 	Config
-	Name         string
-	FunctionName string
-	Path         string
-	Service      lambdaiface.LambdaAPI
-	Log          log.Interface
-	IgnoreFile   []byte
-	Plugins      []string
+	Name           string
+	FunctionName   string
+	Path           string
+	Service        lambdaiface.LambdaAPI
+	Log            log.Interface
+	IgnoreFile     []byte
+	Plugins        []string
+	IsRoleRequired bool
 }
 
 // Open the function.json file and prime the config.
@@ -130,6 +131,10 @@ func (f *Function) Open() error {
 
 	if err := f.hookOpen(); err != nil {
 		return err
+	}
+
+	if f.IsRoleRequired && f.Config.Role == "" {
+		return errors.New("role is required")
 	}
 
 	if err := validator.Validate(&f.Config); err != nil {

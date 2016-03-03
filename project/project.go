@@ -52,13 +52,14 @@ type Config struct {
 // Project represents zero or more Lambda functions.
 type Project struct {
 	Config
-	Path         string
-	Concurrency  int
-	Log          log.Interface
-	Service      lambdaiface.LambdaAPI
-	Functions    []*function.Function
-	IgnoreFile   []byte
-	nameTemplate *template.Template
+	Path          string
+	Concurrency   int
+	Log           log.Interface
+	Service       lambdaiface.LambdaAPI
+	Functions     []*function.Function
+	IgnoreFile    []byte
+	ReadInfraRole bool
+	nameTemplate  *template.Template
 }
 
 // defaults applies configuration defaults.
@@ -66,7 +67,7 @@ func (p *Project) defaults() {
 	p.Memory = DefaultMemory
 	p.Timeout = DefaultTimeout
 	p.IgnoreFile = []byte(".apexignore\nfunction.json\n")
-	p.Role = p.readInfraRole()
+	p.ReadInfraRole = true
 
 	if p.Concurrency == 0 {
 		p.Concurrency = 5
@@ -267,12 +268,17 @@ func (p *Project) LoadFunction(name string) (*function.Function, error) {
 func (p *Project) LoadFunctionByPath(name, path string) (*function.Function, error) {
 	p.Log.Debugf("loading function in %s", path)
 
+	role := p.Role
+	if role == "" && p.ReadInfraRole {
+		role = p.readInfraRole()
+	}
+
 	fn := &function.Function{
 		Config: function.Config{
 			Runtime:          p.Runtime,
 			Memory:           p.Memory,
 			Timeout:          p.Timeout,
-			Role:             p.Role,
+			Role:             role,
 			Handler:          p.Handler,
 			Shim:             p.Shim,
 			Hooks:            p.Hooks,
@@ -280,11 +286,12 @@ func (p *Project) LoadFunctionByPath(name, path string) (*function.Function, err
 			RetainedVersions: p.RetainedVersions,
 			VPC:              p.VPC,
 		},
-		Name:       name,
-		Path:       path,
-		Service:    p.Service,
-		Log:        p.Log,
-		IgnoreFile: p.IgnoreFile,
+		Name:           name,
+		Path:           path,
+		Service:        p.Service,
+		Log:            p.Log,
+		IgnoreFile:     p.IgnoreFile,
+		IsRoleRequired: p.ReadInfraRole,
 	}
 
 	if name, err := p.name(fn); err == nil {

@@ -30,6 +30,7 @@ func init() {
 
 // Run command.
 func run(c *cobra.Command, args []string) error {
+	root.Project.ReadInfraRole = false
 	if err := root.Project.LoadFunctions(); err != nil {
 		return err
 	}
