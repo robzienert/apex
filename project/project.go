@@ -153,6 +153,28 @@ func (p *Project) LoadFunctions(names ...string) error {
 	return nil
 }
 
+// LoadFunctionsForConfig reads the ./functions directory, populating the Functions field.
+func (p *Project) LoadFunctionsForConfig() error {
+	dir := filepath.Join(p.Path, functionsDir)
+	p.Log.Debugf("loading functions for config in %s", dir)
+
+	names, err := p.FunctionDirNames()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		fn, err := p.LoadFunctionForConfig(name)
+		if err != nil {
+			return err
+		}
+
+		p.Functions = append(p.Functions, fn)
+	}
+
+	return nil
+}
+
 // DeployAndClean deploys functions and then cleans up their build artifacts.
 func (p *Project) DeployAndClean() error {
 	if err := p.Deploy(); err != nil {
@@ -263,6 +285,11 @@ func (p *Project) LoadFunction(name string) (*function.Function, error) {
 	return p.LoadFunctionByPath(name, filepath.Join(p.Path, functionsDir, name))
 }
 
+// LoadFunctionForConfig returns the function with only FunctionName populated in the ./functions/<name> directory.
+func (p *Project) LoadFunctionForConfig(name string) (*function.Function, error) {
+	return p.LoadFunctionForConfigByPath(name, filepath.Join(p.Path, functionsDir, name))
+}
+
 // LoadFunctionByPath returns the function in the given directory.
 func (p *Project) LoadFunctionByPath(name, path string) (*function.Function, error) {
 	p.Log.Debugf("loading function in %s", path)
@@ -294,6 +321,26 @@ func (p *Project) LoadFunctionByPath(name, path string) (*function.Function, err
 	}
 
 	if err := fn.Open(); err != nil {
+		return nil, err
+	}
+
+	return fn, nil
+}
+
+// LoadFunctionForConfigByPath returns the function in the given directory.
+// Function populate only FunctionName as this is the only field needed for GetConfig
+func (p *Project) LoadFunctionForConfigByPath(name, path string) (*function.Function, error) {
+	p.Log.Debugf("loading function for config in %s", path)
+
+	fn := &function.Function{
+		Name:    name,
+		Log:     p.Log,
+		Service: p.Service,
+	}
+
+	if name, err := p.name(fn); err == nil {
+		fn.FunctionName = name
+	} else {
 		return nil, err
 	}
 

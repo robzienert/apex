@@ -30,7 +30,7 @@ func init() {
 
 // Run command.
 func run(c *cobra.Command, args []string) error {
-	if err := root.Project.LoadFunctions(); err != nil {
+	if err := root.Project.LoadFunctionsForConfig(); err != nil {
 		return err
 	}
 
